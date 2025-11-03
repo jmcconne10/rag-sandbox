@@ -1,0 +1,50 @@
+services:
+
+  ollama:
+    image: ollama/ollama:0.3.14   # <-- pin a modern tag; not 'latest'
+    container_name: ollama
+    restart: unless-stopped
+    ports: ["11434:11434"]
+    volumes:
+      - ollama_models:/root/.ollama
+
+
+  rag-api:
+    build: { context: ./api }
+    container_name: rag-api
+    restart: unless-stopped
+    depends_on:
+      - ollama
+    environment:
+      - OLLAMA_URL=http://ollama:11434
+      - USE_LOCAL_EMBED=1
+      - EMBED_MODEL=sentence-transformers/all-MiniLM-L6-v2
+      - CHAT_MODEL=llama3.2:3b-instruct-q4_K_M
+      - CHROMA_PATH=/app/chroma
+      - COLLECTION_NAME=docs
+      - CHUNK_SIZE=1000
+      - CHUNK_OVERLAP=150
+      - TOP_K=6
+      - CHROMA_DISABLE_TELEMETRY=1
+      - DATA_DIR=/data/knowledge
+    volumes:
+      - ${HOME}/rag-sandbox/data:/app/data:ro
+      - chroma_data:/app/chroma
+      - ./data:/data
+    ports:
+      - "8000:8000"
+
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:latest
+    container_name: openwebui
+    restart: unless-stopped
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+    ports: ["3000:8080"]
+    volumes: [openwebui_data:/app/backend/data]
+    depends_on: [ollama]
+
+volumes:
+  ollama_models:
+  chroma_data:
+  openwebui_data:

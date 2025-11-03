@@ -1,0 +1,58 @@
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    ports: ["11434:11434"]
+    volumes: [ollama_models:/root/.ollama]
+    entrypoint: ["/bin/sh","-c"]
+    command: |
+      "set -e;
+       ollama serve &
+       sleep 2;
+       ollama pull llama3.2:3b-instruct-q4_K_M || true;
+       ollama pull bge-m3 || true;
+       wait -n"
+
+  chroma:
+    image: ghcr.io/chroma-core/chroma:latest
+    container_name: chroma
+    restart: unless-stopped
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    ports: ["8001:8000"]
+    volumes: [chroma_data:/chroma/.chroma/index]
+
+  rag-api:
+    build: { context: ./api }
+    container_name: rag-api
+    restart: unless-stopped
+    depends_on: [ollama, chroma]
+    environment:
+      - OLLAMA_URL=http://ollama:11434
+      - CHROMA_URL=http://chroma:8000
+      - COLLECTION_NAME=docs
+      - CHUNK_SIZE=1000
+      - CHUNK_OVERLAP=150
+      - TOP_K=6
+      - EMBED_MODEL=bge-m3
+      - CHAT_MODEL=llama3.2:3b-instruct-q4_K_M
+    volumes: ["./data:/app/data:ro"]
+    ports: ["8000:8000"]
+
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:latest
+    container_name: openwebui
+    restart: unless-stopped
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+    ports: ["3000:8080"]
+    volumes: [openwebui_data:/app/backend/data]
+    depends_on: [ollama]
+
+volumes:
+  ollama_models:
+  chroma_data:
+  openwebui_data:

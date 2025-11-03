@@ -1,0 +1,17 @@
+# --- Core API packages ---
+fastapi==0.115.5
+uvicorn[standard]==0.32.0
+httpx==0.27.2
+pydantic==2.9.2
+
+# --- Vector store + parsing ---
+chromadb==0.5.18
+# qdrant-client is NOT used when running Chroma locally; comment it out to reduce deps
+# qdrant-client==1.12.1
+numpy==1.26.4
+pypdf==5.0.1
+markdown-it-py==3.0.0
+
+# --- Local embeddings (FastEmbed CPU via ONNXRuntime) ---
+fastembed==0.3.6
+onnxruntime==1.19.2
